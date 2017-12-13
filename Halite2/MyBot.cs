@@ -12,39 +12,7 @@ namespace Halite2
             while (true)
             {
                 var moveList = GameMaster.Instance.PlayTurn(Networking.ReadLineIntoMetadata());
-
                 Networking.SendMoves(moveList);
-
-                //Remove..
-                foreach (Ship ship in gameAwareness.GameMap.GetMyPlayer().GetShips().Values)
-                {
-                    if (ship.GetDockingStatus() != Ship.DockingStatus.Undocked)
-                    {
-                        continue;
-                    }
-
-                    foreach (Planet planet in gameAwareness.GetAllPlanets().Values)
-                    {
-                        if (planet.IsOwned())
-                        {
-                            continue;
-                        }
-
-                        if (ship.CanDock(planet))
-                        {
-                            moveList.Add(new DockMove(ship, planet));
-                            break;
-                        }
-
-                        ThrustMove newThrustMove = Navigation.NavigateShipToDock(gameAwareness, ship, planet, Constants.MAX_SPEED / 2);
-                        if (newThrustMove != null)
-                        {
-                            moveList.Add(newThrustMove);
-                        }
-
-                        break;
-                    }
-                }
             }
         }
 
