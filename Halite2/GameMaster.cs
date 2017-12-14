@@ -60,6 +60,7 @@ namespace Halite2
         public List<Planet> UnClaimedPlanets { get; set; }
 
         public Player Leader { get; set; }
+        public int TurnCount { get; set; }
         
 //        public Dictionary<Planet, List<Ship>> EnemyShipsWithinDockingDistance { get; set; }
 
@@ -67,6 +68,7 @@ namespace Halite2
         public List<Move> PlayTurn(Metadata metadata)
         {
             //New Turn
+            TurnCount++;
             UpdateGame(metadata);
 
             //Determine Ship Moves
@@ -78,7 +80,7 @@ namespace Halite2
             return myMoves;
         }
 
-        private void UpdateGame(Metadata metadata)
+        public void UpdateGame(Metadata metadata)
         {
             GameMap.UpdateMap(metadata);
             UpdateState();

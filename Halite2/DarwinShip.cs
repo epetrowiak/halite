@@ -36,13 +36,13 @@ namespace Halite2
             var bestMove = BestMoveToUnclaimedPlanet(gm);
 
             //Check Claimed Planet move
-            var nextMove = BestMoveToClaimedPlanet(gm);
+//            var nextMove = BestMoveToClaimedPlanet(gm);
             //Check next move against best move
-            bestMove = bestMove.CompareTo(nextMove) > 0 ? bestMove : nextMove;
+//            bestMove = bestMove?.CompareTo(nextMove) > 0 ? bestMove : nextMove;
 
             //Check Move based on game state
-            nextMove = BestGameMove(gm);
-            bestMove = bestMove.CompareTo(nextMove) > 0 ? bestMove : nextMove;
+//            nextMove = BestGameMove(gm);
+//            bestMove = bestMove?.CompareTo(nextMove) > 0 ? bestMove : nextMove;
 
             return bestMove?.Move;
         }
@@ -76,6 +76,12 @@ namespace Halite2
                     //TODO: Verify this works
                     var enemyShip = gm.GameMap.GetShip(claimedPlanet.GetOwner(), shipId);
                     var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
+
+                    if (move == null)
+                    {
+                        continue;
+                    }
+
                     move.Value = ClaimedPlanetMultiplier(move.Value);
 
                     if (move.CompareTo(bestMove) > 0)
@@ -93,15 +99,22 @@ namespace Halite2
             SmartMove bestMove = null;
             foreach (var unClaimedPlanet in gm.UnClaimedPlanets)
             {
-                if (!unClaimedPlanet.IsFull() && Me.CanDock(unClaimedPlanet))
+//                if (!unClaimedPlanet.IsFull() && Me.CanDock(unClaimedPlanet))
+                if (Me.CanDock(unClaimedPlanet))
                 {
                     return new SmartMove(int.MaxValue, new DockMove(Me, unClaimedPlanet));
                 }
 
-                var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(unClaimedPlanet));
-                move.Value = UnclaimedPlanetMultiplier(move.Value);
+                //                var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(unClaimedPlanet));
+                var newThrustMove = Navigation.NavigateShipToDock(gm.GameMap, Me, unClaimedPlanet, _thrust);
+                SmartMove move = null;
+                if (newThrustMove != null)
+                {
+                    double val = _distanceNumerator / Me.GetDistanceTo(Me.GetClosestPoint(unClaimedPlanet));
+                    move = new SmartMove(UnclaimedPlanetMultiplier(val), newThrustMove);
+                }
 
-                if (move.CompareTo(bestMove) > 0)
+                if (move!= null && move.CompareTo(bestMove) > 0)
                 {
                     bestMove = move;
                 }
@@ -131,8 +144,10 @@ namespace Halite2
             double angleRad = Me.OrientTowardsInRad(targetPos);
 
             //Avoid crashing into a planet and my ships
-            if (gameMap.ObjectsBetween(Me, targetPos).Any(x =>
-                x.GetType() == typeof(Planet) || x.GetOwner() == GameMaster.Instance.MyPlayerId))
+            if (gameMap.ObjectsBetween(Me, targetPos).Any()
+//                .Any(x =>
+//                x.GetType() == typeof(Planet) || x.GetOwner() == GameMaster.Instance.MyPlayerId)
+                )
             {
                 double newTargetDx = Math.Cos(angleRad + angularStepRad) * distance;
                 double newTargetDy = Math.Sin(angleRad + angularStepRad) * distance;
@@ -144,12 +159,12 @@ namespace Halite2
             {
                 //TODO: Lets ignore for now and find out what happens
             }
-
+            
             int thrust = distance < maxThrust ? (int) distance : maxThrust;
             int angleDeg = Util.AngleRadToDegClipped(angleRad);
 
             //Increase pt value as you get closer to target
-            double ptVal = distance > 0 ? _distanceNumerator / distance : 100;
+            double ptVal = distance > 0 ? _distanceNumerator / distance : _distanceNumerator * 100;
 
             return new SmartMove(ptVal, new ThrustMove(Me, angleDeg, thrust));
         }
