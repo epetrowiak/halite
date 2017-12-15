@@ -139,8 +139,7 @@ namespace Halite2
             double angleRad = Me.OrientTowardsInRad(targetPos);
 
             //Avoid crashing into a planet and my ships
-            if (gameMap.ObjectsBetween(Me, targetPos).Any()
-                )
+            if (gameMap.ObjectsBetween(Me, targetPos).Any())
             {
                 double newTargetDx = Math.Cos(angleRad + angularStepRad) * distance;
                 double newTargetDy = Math.Sin(angleRad + angularStepRad) * distance;
