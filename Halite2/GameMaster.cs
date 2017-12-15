@@ -33,6 +33,7 @@ namespace Halite2
             UnClaimedPlanets = new List<Planet>();
 //            EnemyShipsWithinDockingDistance = new Dictionary<Planet, List<Ship>>();
             Leader = GameMap.GetMyPlayer();
+            PreviousShips = new List<DarwinShip>();
         }
 
         public static GameMaster Initialize(GameMap gameMap)
@@ -53,6 +54,7 @@ namespace Halite2
         public GameState GameState { get; set; }
         
         public Dictionary<int, DarwinShip> MyShips { get; set; }
+        public List<DarwinShip> PreviousShips { get; set; }
         public double MyShipsOverEnemyPercentage { get; set; }
 
         public bool IsAllPlanetsOwned => ClaimedPlanets.Any() && !UnClaimedPlanets.Any();
@@ -64,33 +66,20 @@ namespace Halite2
         
 //        public Dictionary<Planet, List<Ship>> EnemyShipsWithinDockingDistance { get; set; }
 
-
-        public List<Move> PlayTurn(Metadata metadata)
-        {
-            //New Turn
-            TurnCount++;
-            UpdateGame(metadata);
-
-            //Determine Ship Moves
-            var myMoves = MyShips.Values
-                .Select(ship => ship.DoWork())
-                .Where(move => move != null).ToList();
-
-            //End Turn
-            return myMoves;
-        }
-
+            
         public void UpdateGame(Metadata metadata)
         {
             GameMap.UpdateMap(metadata);
             UpdateState();
+            TurnCount++;
         }
 
         private void UpdateState()
         {
-            UpdateMyShips();
+//            UpdateMyShips();
+            PreviousShips.Clear();
             UpdatePlanets();
-            UpdateLeader();
+//            UpdateLeader();
         }
 
         private void UpdateLeader()
