@@ -12,8 +12,12 @@ namespace Halite2
         private static readonly int _thrust = Constants.MAX_SPEED;
         private static readonly int _maxCorrections = Constants.MAX_NAVIGATION_CORRECTIONS;
 
-        private static readonly double _distanceNumerator = 10.0;
+        private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 2.0;
+        private static readonly double _unclaimedPlanetBonus = 4.0;
+        private static readonly double _myPlanetBonus = 1.5;
+        private static readonly double _enemyPlanetBonus = 1.0;
+
         private static readonly int _shipCountToAttackBonus = 4;
         private static readonly double _kamikazeMinPercentage = 0.3;
         
@@ -31,89 +35,141 @@ namespace Halite2
                 var gameMap = gameMaster.GameMap;
 
                 int shipCount = 0;
+                Ship prevShip = null;
                 foreach (Ship ship in gameMap.GetMyPlayer().GetShips().Values)
                 {
+                    shipCount++;
                     if (ship.GetDockingStatus() != Ship.DockingStatus.Undocked)
                     {
+                        prevShip = ship;
                         continue;
                     }
 
-                    var bestMove = GetBestMoveToUnclaimedPlanet(gameMaster, ship);
-                    var nextMove = GetBestMoveToClaimedPlanet(gameMaster, ship, shipCount++);
-
-                    if (nextMove != null && nextMove.CompareTo(bestMove) > 0)
-                    {
-                        bestMove = nextMove;
-                    }
+                    var bestMove = GetBestMoveToUnclaimedPlanet(gameMaster, ship, prevShip);
+                    var nextMove = GetBestMoveToClaimedPlanet(gameMaster, ship, prevShip, shipCount);
+                    EvaluateBestMethod(nextMove, ref bestMove);
 
                     if (bestMove != null)
                     {
                         moveList.Add(bestMove.Move);
                     }
+                    prevShip = ship;
                 }
 
                 Networking.SendMoves(moveList);
             }
         }
-
-        private static SmartMove GetBestMoveToUnclaimedPlanet(GameMaster gameMaster, Ship ship)
+        
+        private static SmartMove GetBestMoveToUnclaimedPlanet(GameMaster gameMaster, Ship ship, Ship prevShip)
         {
             SmartMove bestMove = null;
-            foreach (Planet planet in gameMaster.UnClaimedPlanets)
+            foreach (var planet in gameMaster.UnClaimedPlanets)
             {
                 if (ship.CanDock(planet))
                 {
-                    bestMove = new SmartMove(double.MaxValue, new DockMove(ship, planet));
+                    bestMove = new SmartMove(GetDockValue(ship, planet), new DockMove(ship, planet));
                     break;
                 }
 
-                var move = NavigateToTarget(ship, gameMaster.GameMap, ship.GetClosestPoint(planet));
+                var move = NavigateToTarget(ship, prevShip, gameMaster.GameMap, ship.GetClosestPoint(planet));
                 if (move == null)
                 {
                     continue;
                 }
 
                 move.Value = UnclaimedPlanetMultiplier(move.Value);
-                if (move.CompareTo(bestMove) > 0)
-                {
-                    bestMove = move;
-                }
+                EvaluateBestMethod(move, ref bestMove);
             }
             return bestMove;
         }
-
-        private static SmartMove GetBestMoveToClaimedPlanet(GameMaster gameMaster, Ship ship, int curCount)
+        
+        private static SmartMove GetBestMoveToClaimedPlanet(GameMaster gameMaster, Ship ship, Ship prevShip, int curCount)
         {
             SmartMove bestMove = null;
-            foreach (Planet planet in gameMaster.ClaimedPlanets)
+            SmartMove curMove = null;
+            foreach (var planet in gameMaster.ClaimedPlanets)
             {
-                //Do nothing to my planet
-                if (planet.GetOwner() == gameMaster.MyPlayerId) { continue; }
+                //When planet is mine
+                if (planet.GetOwner() == gameMaster.MyPlayerId)
+                {
+                    //curMove = GetBestMoveWhenPlanetIsMine(gameMaster, ship, prevShip, planet);
+                    //EvaluateBestMethod(curMove, ref bestMove);
+                    continue;
+                }
 
+                //When planet is claimed by enemy
                 foreach (var shipId in planet.GetDockedShips())
                 {
                     //TODO: Verify this works
                     var enemyShip = gameMaster.GameMap.GetShip(planet.GetOwner(), shipId);
-                    var move = NavigateToTarget(ship, gameMaster.GameMap, ship.GetClosestPoint(enemyShip));
+                    curMove = NavigateToTarget(ship, prevShip, gameMaster.GameMap, ship.GetClosestPoint(enemyShip));
 
-                    if (move == null)
+                    if (curMove == null)
                     {
                         continue;
                     }
 
-                    move.Value = ClaimedPlanetMultiplier(move.Value, curCount);
-                    if (move.CompareTo(bestMove) > 0)
-                    {
-                        bestMove = move;
-                    }
+                    curMove.Value = ClaimedPlanetMultiplier(curMove.Value, curCount);
+                    EvaluateBestMethod(curMove, ref bestMove);
                 }
             }
             return bestMove;
         }
 
+        private static SmartMove GetBestMoveWhenPlanetIsMine(GameMaster gameMaster, Ship ship, Ship prevShip, Planet planet)
+        {
+            if (planet.IsFull()) { return null; }
+
+            if (ship.CanDock(planet))
+            {
+                return new SmartMove(GetDockValue(ship, planet), new DockMove(ship, planet));
+            }
+            /*
+            var curMove = NavigateToTarget(ship, prevShip, gameMaster.GameMap, ship.GetClosestPoint(planet));
+
+            if (curMove == null)
+            {
+                return null;
+            }
+            curMove.Value = MyPlanetMultiplier(curMove.Value);
+            return curMove;
+            */
+            return null;
+        }
+
+        /*
+         ********* Utilities
+         */
+
+        private static void EvaluateBestMethod(SmartMove nextMove, ref SmartMove bestMove)
+        {
+            if (nextMove != null && nextMove.CompareTo(bestMove) > 0)
+            {
+                bestMove = nextMove;
+            }
+        }
+
+        private static double GetDockValue(Ship ship, Planet planet)
+        {
+            //If I own the planet already
+            var dist = ship.GetDistanceTo(ship.GetClosestPoint(planet));
+            var distVal = _distanceNumerator / dist;
+            if (planet.IsOwned() && planet.GetOwner() == ship.GetOwner())
+            {
+                return MyPlanetMultiplier(distVal);
+            }
+
+            return distVal * 2;
+        }
+
         private static double UnclaimedPlanetMultiplier(double curValue)
         {
-            return 2.0 * curValue;
+            return _unclaimedPlanetBonus * curValue;
+        }
+
+        private static double MyPlanetMultiplier(double curValue)
+        {
+            return _myPlanetBonus * curValue;
         }
 
         private static double ClaimedPlanetMultiplier(double curValue, int curCount)
@@ -121,16 +177,23 @@ namespace Halite2
             //Every nth ship, a bonus will be given to attack
             var atkBonus = curCount % _shipCountToAttackBonus == 0 ? _shipAttackBonus : 1;
 
-            return 1.0 * curValue * atkBonus;
+            return _enemyPlanetBonus * curValue * atkBonus;
         }
 
-        private static SmartMove NavigateToTarget(Ship ship, GameMap gameMap, Position targetPos)
+
+        /*
+         * Navigation
+         */
+
+
+        private static SmartMove NavigateToTarget(Ship ship, Ship prevShip, GameMap gameMap, Position targetPos)
         {
-            return NavigateToTarget(ship, gameMap, targetPos, _thrust, _maxCorrections, _angularStepRad);
+            return NavigateToTarget(ship, prevShip, gameMap, targetPos, _thrust, _maxCorrections, _angularStepRad);
         }
 
         private static SmartMove NavigateToTarget(
             Ship ship,
+            Ship prevShip,
             GameMap gameMap,
             Position targetPos,
             int maxThrust,
@@ -154,14 +217,17 @@ namespace Halite2
                 double newTargetDy = Math.Sin(angleRad + angularStepRad) * distance;
                 Position newTarget = new Position(ship.GetXPos() + newTargetDx, ship.GetYPos() + newTargetDy);
 
-                return NavigateToTarget(ship, gameMap, newTarget, maxThrust, (maxCorrections - 1), angularStepRad);
+                return NavigateToTarget(ship, prevShip, gameMap, newTarget, maxThrust, (maxCorrections - 1), angularStepRad);
             }
             else //Determine value of crashing into enemy
             {
                 //TODO: Lets ignore for now and find out what happens
             }
 
+            bool prevShipTooClose = prevShip != null && ship.GetDistanceTo(prevShip) < 1;
+
             int thrust = distance < maxThrust ? (int)distance : maxThrust;
+            thrust -= prevShipTooClose ? 1 : 0;
             int angleDeg = Util.AngleRadToDegClipped(angleRad);
 
             //Increase pt value as you get closer to target
