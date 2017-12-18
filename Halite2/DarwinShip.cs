@@ -43,10 +43,16 @@ namespace Halite2
             {
                 return null;
             }
-            if (myDockingStatus == Ship.DockingStatus.Docking 
-                && IsDockingPlanetFull(gm.GameMap))
+            if (myDockingStatus == Ship.DockingStatus.Docking)
             {
-                DockingPlanetId = null;
+                if (IsDockingPlanetFull(gm.GameMap))
+                {
+                   DockingPlanetId = null;
+                }
+                else
+                {
+                    return null;
+                }
             }
 
             //Check Unclaimed Planet move
@@ -107,7 +113,9 @@ namespace Halite2
 
             if (Me.CanDock(claimedPlanet))
             {
-                myMove = new SmartMove(GetDockValue(Me, claimedPlanet) * ((double)remainingSpots / 2), new DockMove(Me, claimedPlanet), claimedPlanet.GetId());
+                myMove = new SmartMove(
+                    GetDockValue(Me, claimedPlanet) * ((double)remainingSpots / 2)
+                    , new DockMove(Me, claimedPlanet), claimedPlanet.GetId());
 //                var closestPoint = Me.GetClosestPoint(claimedPlanet);
 //                foreach (var shipId in claimedPlanet.GetDockedShips())
 //                {
