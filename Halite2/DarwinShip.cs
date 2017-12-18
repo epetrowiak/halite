@@ -19,7 +19,7 @@ namespace Halite2
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
-        private static readonly int _maxCorrections = 6;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        private static readonly int _maxCorrections = 8;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 4.0;
@@ -39,21 +39,25 @@ namespace Halite2
         {
             var gm = GameMaster.Instance;
             var myDockingStatus = Me.GetDockingStatus();
-            if (myDockingStatus == Ship.DockingStatus.Docked)
+            if (myDockingStatus != Ship.DockingStatus.Undocked)
             {
                 return null;
             }
-            if (myDockingStatus == Ship.DockingStatus.Docking)
-            {
-                if (IsDockingPlanetFull(gm.GameMap))
-                {
-                   DockingPlanetId = null;
-                }
-                else
-                {
-                    return null;
-                }
-            }
+            //            if (myDockingStatus == Ship.DockingStatus.Docked)
+            //            {
+            //                return null;
+            //            }
+            //            if (myDockingStatus == Ship.DockingStatus.Docking)
+            //            {
+            //                if (IsDockingPlanetFull(gm.GameMap))
+            //                {
+            //                   DockingPlanetId = null;
+            //                }
+            //                else
+            //                {
+            //                    return null;
+            //                }
+            //            }
 
             //Check Unclaimed Planet move
             BestMoveToUnclaimedPlanet(gm);
@@ -88,7 +92,6 @@ namespace Halite2
         {
             foreach (var claimedPlanet in gm.ClaimedPlanets)
             {
-                //Do nothing to my planet
                 if (claimedPlanet.GetOwner() == gm.MyPlayerId)
                 {
                     DockToMyPlanetMove(gm, claimedPlanet);
@@ -124,7 +127,7 @@ namespace Halite2
             }
             else
             {
-                myMove = NavigateToTarget(gm.GameMap, claimedPlanet);
+//                myMove = NavigateToTarget(gm.GameMap, claimedPlanet);
             }
 
             EvaluateBestMove(myMove);
@@ -185,7 +188,8 @@ namespace Halite2
             double angleRad = Me.OrientTowardsInRad(targetPos);
 
             var obstruction = gameMap.ObjectsBetween(Me, targetPos).FirstOrDefault(
-                x => x.GetType() == typeof(Ship) && x.GetOwner() != Me.GetId()); //Ignore enemy ships
+                x => x.GetType() == typeof(Planet) ||
+                    (x.GetType() == typeof(Ship) && x.GetOwner() == Me.GetId())); //Ignore enemy ships
             if (obstruction != null)
             {
                 var bestTarget = AvoidObstruction(targetPos, obstruction, angleRad, distance);
