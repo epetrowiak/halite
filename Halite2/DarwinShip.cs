@@ -9,13 +9,20 @@ namespace Halite2
     {
         public Ship Me { get; }
         public SmartMove BestMove { get; set; }
+        public int? DockingPlanetId { get; set; }
+
+        public bool IsDockingPlanetFull(GameMap gameMap)
+        {
+            //If No value, then not docking so planet is full
+            return !DockingPlanetId.HasValue || gameMap.GetPlanet(DockingPlanetId.Value).IsFull();
+        } 
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
         private static readonly int _maxCorrections = 6;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
-        private static readonly double _shipAttackBonus = 2.0;
+        private static readonly double _shipAttackBonus = 4.0;
         private static readonly double _unclaimedPlanetBonus = 4.0;
         private static readonly double _myPlanetBonus = 1.5;
         private static readonly double _enemyPlanetBonus = 1.0;
@@ -31,9 +38,15 @@ namespace Halite2
         public Move DoWork()
         {
             var gm = GameMaster.Instance;
-            if (Me.GetDockingStatus() != Ship.DockingStatus.Undocked)
+            var myDockingStatus = Me.GetDockingStatus();
+            if (myDockingStatus == Ship.DockingStatus.Docked)
             {
                 return null;
+            }
+            if (myDockingStatus == Ship.DockingStatus.Docking 
+                && IsDockingPlanetFull(gm.GameMap))
+            {
+                DockingPlanetId = null;
             }
 
             //Check Unclaimed Planet move
@@ -44,8 +57,7 @@ namespace Halite2
 
             //Check Move based on game state
             //            nextMove = BestGameMove(gm);
-//            EvaluateBestMethod(nextMove);
-
+//            EvaluateBestMove(nextMove);
 
             return BestMove?.Move;
         }
@@ -89,7 +101,25 @@ namespace Halite2
                 return;
             }
 
+            SmartMove myMove = null;
+            int numDocked = claimedPlanet.GetDockedShips().Count;
+            int remainingSpots = claimedPlanet.GetDockingSpots() - numDocked;
 
+            if (Me.CanDock(claimedPlanet))
+            {
+                myMove = new SmartMove(GetDockValue(Me, claimedPlanet) * ((double)remainingSpots / 2), new DockMove(Me, claimedPlanet), claimedPlanet.GetId());
+//                var closestPoint = Me.GetClosestPoint(claimedPlanet);
+//                foreach (var shipId in claimedPlanet.GetDockedShips())
+//                {
+//                    
+//                }
+            }
+            else
+            {
+                myMove = NavigateToTarget(gm.GameMap, claimedPlanet);
+            }
+
+            EvaluateBestMove(myMove);
         }
 
         private void ClaimEnemyPlanetMove(GameMaster gm, Planet claimedPlanet)
@@ -106,7 +136,7 @@ namespace Halite2
                 }
 
                 curMove.Value = ClaimedPlanetMultiplier(curMove.Value, gm.PreviousShips.Count);
-                EvaluateBestMethod(curMove);
+                EvaluateBestMove(curMove);
             }
         }
 
@@ -116,13 +146,13 @@ namespace Halite2
             {
                 if (Me.CanDock(unClaimedPlanet))
                 {
-                    var curMove = new SmartMove(GetDockValue(Me, unClaimedPlanet), new DockMove(Me, unClaimedPlanet));
-                    EvaluateBestMethod(curMove);
+                    var curMove = new SmartMove(GetDockValue(Me, unClaimedPlanet), new DockMove(Me, unClaimedPlanet), unClaimedPlanet.GetId());
+                    EvaluateBestMove(curMove);
                     break;
                 }
 
                 var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(unClaimedPlanet));
-                EvaluateBestMethod(move);
+                EvaluateBestMove(move);
             }
 
         }
@@ -182,11 +212,22 @@ namespace Halite2
         }
 
         #region Helpers
-        private void EvaluateBestMethod(SmartMove nextMove)
+        private void EvaluateBestMove(SmartMove nextMove)
         {
-            if (nextMove != null && nextMove.CompareTo(BestMove) > 0)
+            //Next move is not greater than current best move
+            if (nextMove == null || nextMove.CompareTo(BestMove) <= 0)
             {
-                BestMove = nextMove;
+                return;
+            }
+
+            BestMove = nextMove;
+            if (BestMove.IsDockingMove)
+            {
+                DockingPlanetId = BestMove.DockingToPlanetId;
+            }
+            else
+            {
+                DockingPlanetId = null;
             }
         }
 
@@ -200,7 +241,7 @@ namespace Halite2
                 return MyPlanetMultiplier(distVal);
             }
 
-            return distVal * 2;
+            return UnclaimedPlanetMultiplier(distVal);
         }
 
         private static double UnclaimedPlanetMultiplier(double curValue)
@@ -229,12 +270,23 @@ namespace Halite2
     public class SmartMove : IComparable<SmartMove>
     {
         public double Value { get; set; }
+        public bool IsDockingMove { get; set; }
+        public int DockingToPlanetId { get; set; }
         public Move Move { get; set; }
 
         public SmartMove(double value, Move move)
         {
             Value = value;
             Move = move;
+            IsDockingMove = false;
+        }
+
+        public SmartMove(double value, DockMove move, int planetId)
+        {
+            Value = value;
+            Move = move;
+            IsDockingMove = true;
+            DockingToPlanetId = planetId;
         }
 
         public int CompareTo(SmartMove other)
