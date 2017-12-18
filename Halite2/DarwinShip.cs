@@ -12,7 +12,7 @@ namespace Halite2
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
-        private static readonly int _maxCorrections = 6;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        private static readonly int _maxCorrections = 12;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 2.0;
@@ -146,14 +146,21 @@ namespace Halite2
             double distance = Me.GetDistanceTo(targetPos);
             double angleRad = Me.OrientTowardsInRad(targetPos);
 
+            var planetObstruction = gameMap.ObjectsBetween(Me, targetPos).FirstOrDefault(
+                x => x.GetType() == typeof(Planet));
+            if (planetObstruction != null)
+            {
+                var bestTarget = AvoidObstruction(targetPos, planetObstruction, angleRad, distance);
+                return NavigateToTarget(gameMap, bestTarget, maxThrust, (maxCorrections - 1));
+            }
             var obstruction = gameMap.ObjectsBetween(Me, targetPos).FirstOrDefault(
-                x => x.GetType() == typeof(Ship) && x.GetOwner() != Me.GetId()); //Ignore enemy ships
+                x => x.GetType() == typeof(Ship) && x.GetOwner() == Me.GetId());
             if (obstruction != null)
             {
                 var bestTarget = AvoidObstruction(targetPos, obstruction, angleRad, distance);
                 return NavigateToTarget(gameMap, bestTarget, maxThrust, (maxCorrections - 1));
             }
-            
+
             int thrust = distance < maxThrust ? (int) distance : maxThrust;
             int angleDeg = Util.AngleRadToDegClipped(angleRad);
 
