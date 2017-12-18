@@ -153,28 +153,6 @@ namespace Halite2
                 return NavigateToTarget(gameMap, bestTarget, maxThrust, (maxCorrections - 1));
             }
 
-//            var allObjectsBetween = gameMap.ObjectsBetween(Me, targetPos);
-//            foreach (var entity in allObjectsBetween)
-//            {
-//                var bestTarget = AvoidObstruction(targetPos, entity, angleRad, distance);
-//                return NavigateToTarget(gameMap, bestTarget, maxThrust, (maxCorrections - 1));
-//
-//            }
-//            var planetObstruction = allObjectsBetween.FirstOrDefault(
-//                x => x.GetType() == typeof(Planet));
-//            if (planetObstruction != null)
-//            {
-//                var bestTarget = AvoidObstruction(targetPos, planetObstruction, angleRad, distance);
-//                return NavigateToTarget(gameMap, bestTarget, maxThrust, (maxCorrections - 1));
-//            }
-//            var obstruction = allObjectsBetween.FirstOrDefault(
-//                x => x.GetType() == typeof(Ship) && x.GetOwner() == Me.GetId());
-//            if (obstruction != null)
-//            {
-//                var bestTarget = AvoidObstruction(targetPos, obstruction, angleRad, distance);
-//                return NavigateToTarget(gameMap, bestTarget, maxThrust, (maxCorrections - 1));
-//            }
-
             int thrust = distance < maxThrust ? (int) distance : maxThrust;
             int angleDeg = Util.AngleRadToDegClipped(angleRad);
 
