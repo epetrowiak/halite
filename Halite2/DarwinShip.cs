@@ -12,15 +12,15 @@ namespace Halite2
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
-        private static readonly int _maxCorrections = 12;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        private static readonly int _maxCorrections = 16;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
-        private static readonly double _shipAttackBonus = 2.0;
+        private static readonly double _shipAttackBonus = 12.0;
         private static readonly double _unclaimedPlanetBonus = 4.0;
-        private static readonly double _myPlanetBonus = 1.5;
-        private static readonly double _enemyPlanetBonus = 1.0;
+        private static readonly double _myPlanetBonus = 0.25;
+        private static readonly double _enemyPlanetBonus = 2.5;
 
-        private static readonly int _shipCountToAttackBonus = 4;
+        private static readonly int _shipCountToAttackBonus = 3;
         private static readonly double _kamikazeMinPercentage = 0.3;
 
         public DarwinShip(Ship ship)
@@ -89,6 +89,14 @@ namespace Halite2
                 return;
             }
 
+            if (Me.CanDock(claimedPlanet))
+            {
+                var move = new SmartMove(
+                    GetDockValue(Me, claimedPlanet)
+                    , new DockMove(Me, claimedPlanet));
+                EvaluateBestMethod(move);
+            } 
+
 
         }
 
@@ -105,7 +113,7 @@ namespace Halite2
                     continue;
                 }
 
-                curMove.Value = ClaimedPlanetMultiplier(curMove.Value, gm.PreviousShips.Count);
+                curMove.Value = ClaimedPlanetMultiplier(curMove.Value, gm.PreviousShips.Count+1);
                 EvaluateBestMethod(curMove);
             }
         }
