@@ -29,6 +29,8 @@ namespace Halite2
             GameMap = map;
             GameState = GameState.Expand;
             MyPlayerId = GameMap.GetMyPlayerId();
+            CurrentBattleShipId = 2;
+
             ClaimedPlanets = new List<Planet>();
             UnClaimedPlanets = new List<Planet>();
             EnemyShips = new List<Ship>();
@@ -89,6 +91,16 @@ namespace Halite2
         {
             EnemyShips.Clear();
             EnemyShips.AddRange(GameMap.GetAllShips().Where(ship => ship.GetOwner() != MyPlayerId));
+
+            //Always keep 1 battle ship
+            Ship myship;
+            var shipExists = GameMap.GetMyPlayer().GetShips().TryGetValue(CurrentBattleShipId, out myship);
+            if(!shipExists || (myship != null && myship.GetHealth() <= 0))
+            {
+                KeyValuePair<int, Ship> lastUndockedShip = GameMap.GetMyPlayer().GetShips()
+                    .LastOrDefault(x => x.Value.GetDockingStatus() == Ship.DockingStatus.Undocked);
+                CurrentBattleShipId = lastUndockedShip.Key;
+            }
         }
 
         private void UpdatePlanets()
@@ -115,10 +127,10 @@ namespace Halite2
 
         #endregion
 
-
-        private static bool IsBattleShip(Ship ship)
+        public int CurrentBattleShipId { get; set; }
+        private bool IsBattleShip(Ship ship)
         {
-            return ship.GetId() == 2;
+            return ship.GetId() == CurrentBattleShipId;
         }
     }
 

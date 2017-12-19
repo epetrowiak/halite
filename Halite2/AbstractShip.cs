@@ -20,8 +20,8 @@ namespace Halite2
         protected static readonly double _distanceNumerator = 20.0;
         protected static readonly double _unclaimedPlanetBonus = 4.0;
         protected static readonly double _myPlanetBonus = 0.2;
-        protected static readonly double _enemyPlanetBonus = 4.1;
-        protected static readonly double _defendPlanetBonus = 1.2;
+        protected static readonly double _enemyPlanetBonus = 3.5;
+        protected static readonly double _defendPlanetBonus = 2.0;
 
 
         protected AbstractShip(Ship ship)
