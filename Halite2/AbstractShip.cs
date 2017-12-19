@@ -13,14 +13,16 @@ namespace Halite2
         protected static readonly int _thrust = Constants.MAX_SPEED;
         protected static readonly int _maxCorrections = 10;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
+//        protected static readonly double _shipAttackBonus = 12.0;
+//        protected static readonly int _shipCountToAttackBonus = 3;
+//        protected static readonly double _kamikazeMinPercentage = 0.3;
+
         protected static readonly double _distanceNumerator = 20.0;
-        protected static readonly double _shipAttackBonus = 12.0;
         protected static readonly double _unclaimedPlanetBonus = 4.0;
         protected static readonly double _myPlanetBonus = 0.2;
-        protected static readonly double _enemyPlanetBonus = 5.0;
+        protected static readonly double _enemyPlanetBonus = 4.1;
+        protected static readonly double _defendPlanetBonus = 1.2;
 
-        protected static readonly int _shipCountToAttackBonus = 3;
-        protected static readonly double _kamikazeMinPercentage = 0.3;
 
         protected AbstractShip(Ship ship)
         {
@@ -84,12 +86,14 @@ namespace Halite2
         }
 
         #region Helpers
-        protected void EvaluateBestMethod(SmartMove nextMove)
+        protected bool EvaluateBestMethod(SmartMove nextMove)
         {
             if (nextMove != null && nextMove.CompareTo(BestMove) > 0)
             {
                 BestMove = nextMove;
+                return true;
             }
+            return false;
         }
 
         protected static double GetDockValue(Ship ship, Planet planet)
@@ -104,6 +108,12 @@ namespace Halite2
 
             return distVal * 2;
         }
+
+        protected static double DefendPlanetValue(double distVal)
+        {
+            return _defendPlanetBonus * distVal;
+        }
+
 
         protected static double UnclaimedPlanetMultiplier(double curValue)
         {

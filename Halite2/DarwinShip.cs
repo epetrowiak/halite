@@ -33,19 +33,7 @@ namespace Halite2
 
             return BestMove?.Move;
         }
-
-        private Move DoBattleWithNearestEnemy()
-        {
-            var gameMaster = GameMaster.Instance;
-            foreach (var enemyShip in gameMaster.EnemyShips)
-            {
-                var smartMove = NavigateToTarget(gameMaster.GameMap, Me.GetClosestPoint(enemyShip), _thrust, _maxCorrections);
-                EvaluateBestMethod(smartMove);
-            }
-
-            return BestMove?.Move;
-        }
-
+        
         private SmartMove BestGameMove(GameMaster gm)
         {
             //TODO: GameStates aren't set, and unsure of how to combine this with other 2 moves
@@ -125,11 +113,20 @@ namespace Halite2
                 return false;
             }
 
-            //TODO: Defend against nearby enemies
+            var gm = GameMaster.Instance;
+            foreach (var enemyShip in gm.EnemyShips)
+            {
+                if (enemyShip.GetDistanceTo(planet) > 5) //Too far away, dont care
+                {
+                    continue;
+                }
+
+                var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
+                EvaluateBestMethod(move);
+            }
 
             var curMove = new SmartMove(GetDockValue(Me, planet), new DockMove(Me, planet));
-            EvaluateBestMethod(curMove);
-            return true;
+            return EvaluateBestMethod(curMove);
         }
 
     }
