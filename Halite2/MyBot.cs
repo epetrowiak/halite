@@ -7,6 +7,7 @@ namespace Halite2
 {
     public class MyBot
     {
+
         public static void Main(string[] args)
         {
             Networking networking = new Networking();
@@ -20,9 +21,22 @@ namespace Halite2
                 gameMaster.UpdateGame(readLineIntoMetadata);
                 var gameMap = gameMaster.GameMap;
                 
-                foreach (Ship ship in gameMap.GetMyPlayer().GetShips().Values)
+                foreach (var ship in gameMap.GetMyPlayer().GetShips().Values)
                 {
+                    if (ship.GetHealth() <= 0) //Dunno if these are tracked
+                    {
+                        continue;
+                    }
+
                     var myShip = new DarwinShip(ship);
+                    //Ship 2 will immediately attack
+                    if (ship.GetId() == 2)
+                    {
+                        DoBattle(myShip, moveList);
+                        continue;
+                    }
+
+
                     var bestMove = myShip.DoWork();
 
                     if (bestMove != null)
@@ -35,8 +49,16 @@ namespace Halite2
                 Networking.SendMoves(moveList);
             }
         }
-        
-        
+
+        private static void DoBattle(DarwinShip myShip, List<Move> moveList)
+        {
+            var doBattleWithNearestEnemy = myShip.DoBattleWithNearestEnemy();
+            if (doBattleWithNearestEnemy != null)
+            {
+                moveList.Add(doBattleWithNearestEnemy);
+            }
+        }
+
 
         private static void SetupGame(string[] args)
         {

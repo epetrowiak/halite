@@ -12,7 +12,7 @@ namespace Halite2
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
-        private static readonly int _maxCorrections = 16;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        private static readonly int _maxCorrections = 10;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 12.0;
@@ -46,6 +46,18 @@ namespace Halite2
             //            nextMove = BestGameMove(gm);
 //            EvaluateBestMethod(nextMove);
 
+
+            return BestMove?.Move;
+        }
+
+        public Move DoBattleWithNearestEnemy()
+        {
+            var gameMaster = GameMaster.Instance;
+            foreach (var enemyShip in gameMaster.GameMap.GetAllShips().Where(ship => ship.GetOwner() != Me.GetOwner()))
+            {
+                var smartMove = NavigateToTarget(gameMaster.GameMap, Me.GetClosestPoint(enemyShip), _thrust, _maxCorrections * 3);
+                EvaluateBestMethod(smartMove);
+            }
 
             return BestMove?.Move;
         }
@@ -100,12 +112,12 @@ namespace Halite2
 
         }
 
-        private void ClaimEnemyPlanetMove(GameMaster gm, Planet claimedPlanet)
+        private void ClaimEnemyPlanetMove(GameMaster gm, Planet enemyPlanet)
         {
             SmartMove curMove;
-            foreach (var shipId in claimedPlanet.GetDockedShips())
+            foreach (var shipId in enemyPlanet.GetDockedShips())
             {
-                var enemyShip = gm.GameMap.GetShip(claimedPlanet.GetOwner(), shipId);
+                var enemyShip = gm.GameMap.GetShip(enemyPlanet.GetOwner(), shipId);
                 curMove = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
 
                 if (curMove == null)
@@ -231,6 +243,12 @@ namespace Halite2
 
         #endregion
 
+    }
+
+    public enum ShipType
+    {
+        Normal,
+        Battle
     }
 
     public class SmartMove : IComparable<SmartMove>
