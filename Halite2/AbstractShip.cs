@@ -18,7 +18,7 @@ namespace Halite2
 //        protected static readonly double _kamikazeMinPercentage = 0.3;
 
         protected static readonly double _distanceNumerator = 20.0;
-        protected static readonly double _unclaimedPlanetBonus = 4.0;
+        protected static readonly double _unclaimedPlanetBonus = 8.0;
         protected static readonly double _myPlanetBonus = 0.2;
         protected static readonly double _enemyPlanetBonus = 3.5;
         protected static readonly double _defendPlanetBonus = 2.0;
