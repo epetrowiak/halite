@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Halite2.hlt;
@@ -30,8 +31,9 @@ namespace Halite2
             MyPlayerId = GameMap.GetMyPlayerId();
             ClaimedPlanets = new List<Planet>();
             UnClaimedPlanets = new List<Planet>();
+            EnemyShips = new List<Ship>();
 //            EnemyShipsWithinDockingDistance = new Dictionary<Planet, List<Ship>>();
-            PreviousShips = new List<DarwinShip>();
+//            PreviousShips = new ConcurrentStack<DarwinShip>();
         }
 
         public static GameMaster Initialize(GameMap gameMap)
@@ -51,10 +53,11 @@ namespace Halite2
         public GameMap GameMap { get; set; }
         public GameState GameState { get; set; }
         
-        public List<DarwinShip> PreviousShips { get; set; }
+//        public ConcurrentStack<DarwinShip> PreviousShips { get; set; }
         
         public List<Planet> ClaimedPlanets { get; set; }
         public List<Planet> UnClaimedPlanets { get; set; }
+        public List<Ship> EnemyShips { get; set; }
         
             
         public void UpdateGame(Metadata metadata)
@@ -65,8 +68,15 @@ namespace Halite2
 
         private void UpdateState()
         {
-            PreviousShips.Clear();
+//            PreviousShips.Clear();
             UpdatePlanets();
+            UpdateShips();
+        }
+
+        private void UpdateShips()
+        {
+            EnemyShips.Clear();
+            EnemyShips.AddRange(GameMap.GetAllShips().Where(ship => ship.GetOwner() != MyPlayerId));
         }
 
         private void UpdatePlanets()

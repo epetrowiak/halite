@@ -17,8 +17,8 @@ namespace Halite2
         private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 12.0;
         private static readonly double _unclaimedPlanetBonus = 4.0;
-        private static readonly double _myPlanetBonus = 0.25;
-        private static readonly double _enemyPlanetBonus = 2.5;
+        private static readonly double _myPlanetBonus = 0.2;
+        private static readonly double _enemyPlanetBonus = 5.0;
 
         private static readonly int _shipCountToAttackBonus = 3;
         private static readonly double _kamikazeMinPercentage = 0.3;
@@ -125,7 +125,7 @@ namespace Halite2
                     continue;
                 }
 
-                curMove.Value = ClaimedPlanetMultiplier(curMove.Value, gm.PreviousShips.Count+1);
+                curMove.Value = ClaimedPlanetMultiplier(curMove.Value);
                 EvaluateBestMethod(curMove);
             }
         }
@@ -232,10 +232,11 @@ namespace Halite2
             return _myPlanetBonus * curValue;
         }
 
-        private static double ClaimedPlanetMultiplier(double curValue, int curCount)
+        private static double ClaimedPlanetMultiplier(double curValue)
         {
             //Every nth ship, a bonus will be given to attack
-            var atkBonus = curCount % _shipCountToAttackBonus == 0 ? _shipAttackBonus : 1;
+//            var atkBonus = curCount % _shipCountToAttackBonus == 0 ? _shipAttackBonus : 1;
+            var atkBonus = 1;
 
             return _enemyPlanetBonus * curValue * atkBonus;
         }
