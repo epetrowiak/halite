@@ -12,7 +12,7 @@ namespace Halite2
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
-        private static readonly int _maxCorrections = 16;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        private static readonly int _maxCorrections = 8;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 12.0;
@@ -48,6 +48,19 @@ namespace Halite2
 
 
             return BestMove?.Move;
+        }
+
+        public Move DoBattleWithNearestEnemy()
+        {
+            var gameMap = GameMaster.Instance.GameMap;
+            var nearestEnemy = gameMap.GetAllShips()
+                .Where(ship => ship.GetOwner() != Me.GetOwner())
+                .OrderBy(enemy => Me.GetDistanceTo(enemy))
+                .FirstOrDefault();
+
+            //Fall back on normal behaviour
+            return nearestEnemy == null ? DoWork() 
+                : NavigateToTarget(gameMap, nearestEnemy)?.Move;
         }
 
         private SmartMove BestGameMove(GameMaster gm)
@@ -231,6 +244,12 @@ namespace Halite2
 
         #endregion
 
+    }
+
+    public enum ShipType
+    {
+        Normal,
+        Battle
     }
 
     public class SmartMove : IComparable<SmartMove>

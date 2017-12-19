@@ -23,6 +23,18 @@ namespace Halite2
                 foreach (Ship ship in gameMap.GetMyPlayer().GetShips().Values)
                 {
                     var myShip = new DarwinShip(ship);
+                    //Ship 1 will immediately attack
+                    if (ship.GetId() == 1)
+                    {
+                        var doBattleWithNearestEnemy = myShip.DoBattleWithNearestEnemy();
+                        if (doBattleWithNearestEnemy != null)
+                        {
+                            moveList.Add(doBattleWithNearestEnemy);
+                        }
+                        continue;
+                    }
+
+
                     var bestMove = myShip.DoWork();
 
                     if (bestMove != null)
@@ -35,7 +47,6 @@ namespace Halite2
                 Networking.SendMoves(moveList);
             }
         }
-        
         
 
         private static void SetupGame(string[] args)
