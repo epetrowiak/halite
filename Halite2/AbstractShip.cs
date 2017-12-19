@@ -18,10 +18,10 @@ namespace Halite2
 //        protected static readonly double _kamikazeMinPercentage = 0.3;
 
         protected static readonly double _distanceNumerator = 20.0;
-        protected static readonly double _unclaimedPlanetBonus = 8.0;
+        protected static readonly double _unclaimedPlanetBonus = 4.0;
         protected static readonly double _myPlanetBonus = 0.2;
-        protected static readonly double _enemyPlanetBonus = 3.5;
-        protected static readonly double _defendPlanetBonus = 2.0;
+        protected static readonly double _enemyPlanetBonus = 4.0;
+        protected static readonly double _defendPlanetBonus = 1.5;
 
 
         protected AbstractShip(Ship ship)
@@ -115,9 +115,9 @@ namespace Halite2
         }
 
 
-        protected static double UnclaimedPlanetMultiplier(double curValue)
+        protected static double UnclaimedPlanetMultiplier(double distVal)
         {
-            return _unclaimedPlanetBonus * curValue;
+            return _unclaimedPlanetBonus * distVal;
         }
 
         protected static double MyPlanetMultiplier(double curValue)
@@ -125,13 +125,13 @@ namespace Halite2
             return _myPlanetBonus * curValue;
         }
 
-        protected static double ClaimedPlanetMultiplier(double curValue)
+        protected static double ClaimedPlanetMultiplier(double distVal)
         {
             //Every nth ship, a bonus will be given to attack
             //            var atkBonus = curCount % _shipCountToAttackBonus == 0 ? _shipAttackBonus : 1;
             var atkBonus = 1;
 
-            return _enemyPlanetBonus * curValue * atkBonus;
+            return _enemyPlanetBonus * distVal * atkBonus;
         }
 
 

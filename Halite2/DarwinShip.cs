@@ -102,6 +102,13 @@ namespace Halite2
                 if (TryDockToPlanet(unClaimedPlanet)) break;
 
                 var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(unClaimedPlanet));
+
+                if (move == null)
+                {
+                    continue;
+                }
+
+                move.Value = UnclaimedPlanetMultiplier(move.Value);
                 EvaluateBestMethod(move);
             }
         }
@@ -122,6 +129,12 @@ namespace Halite2
                 }
 
                 var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
+                if (move == null)
+                {
+                    continue;
+                }
+
+                move.Value = DefendPlanetValue(move.Value);
                 EvaluateBestMethod(move);
             }
 
