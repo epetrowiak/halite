@@ -31,37 +31,18 @@ namespace Halite2
                         return;
                     }
 
-                    var myShip = new DarwinShip(ship);
-                    //Ship 2 will immediately attack
-                    if (ship.GetId() == 2)
-                    {
-                        DoBattle(myShip, moveStack);
-                        return;
-                    }
-
+                    var myShip = gameMaster.Activate(ship);
 
                     var bestMove = myShip.DoWork();
-
                     if (bestMove != null)
                     {
                         moveStack.Push(bestMove);
                     }
-
                 });
 
                 Networking.SendMoves(moveStack);
             }
         }
-
-        private static void DoBattle(DarwinShip myShip, ConcurrentStack<Move> moveList)
-        {
-            var doBattleWithNearestEnemy = myShip.DoBattleWithNearestEnemy();
-            if (doBattleWithNearestEnemy != null)
-            {
-                moveList.Push(doBattleWithNearestEnemy);
-            }
-        }
-
 
         private static void SetupGame(string[] args)
         {

@@ -66,9 +66,21 @@ namespace Halite2
             UpdateState();
         }
 
+        public ISmartShip Activate(Ship ship)
+        {
+            if (IsBattleShip(ship))
+            {
+                return new BattleShip(ship);
+            }
+
+            return new DarwinShip(ship);
+        }
+
+        #region Update Game Helpers
+
         private void UpdateState()
         {
-//            PreviousShips.Clear();
+            //            PreviousShips.Clear();
             UpdatePlanets();
             UpdateShips();
         }
@@ -84,7 +96,7 @@ namespace Halite2
             //Reset lists
             ClaimedPlanets.Clear();
             UnClaimedPlanets.Clear();
-//            EnemyShipsWithinDockingDistance.Clear();
+            //            EnemyShipsWithinDockingDistance.Clear();
 
             foreach (var pair in GameMap.GetAllPlanets())
             {
@@ -99,7 +111,15 @@ namespace Halite2
                 }
             }
         }
-        
+
+
+        #endregion
+
+
+        private static bool IsBattleShip(Ship ship)
+        {
+            return ship.GetId() == 2;
+        }
     }
 
     public enum GameState
