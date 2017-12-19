@@ -12,7 +12,7 @@ namespace Halite2
 
         private static readonly double _angularStepRad = Math.PI / 180.0;
         private static readonly int _thrust = Constants.MAX_SPEED;
-        private static readonly int _maxCorrections = 8;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        private static readonly int _maxCorrections = 10;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         private static readonly double _distanceNumerator = 20.0;
         private static readonly double _shipAttackBonus = 12.0;
@@ -52,15 +52,14 @@ namespace Halite2
 
         public Move DoBattleWithNearestEnemy()
         {
-            var gameMap = GameMaster.Instance.GameMap;
-            var nearestEnemy = gameMap.GetAllShips()
-                .Where(ship => ship.GetOwner() != Me.GetOwner())
-                .OrderBy(enemy => Me.GetDistanceTo(enemy))
-                .FirstOrDefault();
+            var gameMaster = GameMaster.Instance;
+            foreach (var enemyShip in gameMaster.GameMap.GetAllShips().Where(ship => ship.GetOwner() != Me.GetOwner()))
+            {
+                var smartMove = NavigateToTarget(gameMaster.GameMap, Me.GetClosestPoint(enemyShip), _thrust, _maxCorrections * 3);
+                EvaluateBestMethod(smartMove);
+            }
 
-            //Fall back on normal behaviour
-            return nearestEnemy == null ? DoWork() 
-                : NavigateToTarget(gameMap, nearestEnemy)?.Move;
+            return BestMove?.Move;
         }
 
         private SmartMove BestGameMove(GameMaster gm)
@@ -113,12 +112,12 @@ namespace Halite2
 
         }
 
-        private void ClaimEnemyPlanetMove(GameMaster gm, Planet claimedPlanet)
+        private void ClaimEnemyPlanetMove(GameMaster gm, Planet enemyPlanet)
         {
             SmartMove curMove;
-            foreach (var shipId in claimedPlanet.GetDockedShips())
+            foreach (var shipId in enemyPlanet.GetDockedShips())
             {
-                var enemyShip = gm.GameMap.GetShip(claimedPlanet.GetOwner(), shipId);
+                var enemyShip = gm.GameMap.GetShip(enemyPlanet.GetOwner(), shipId);
                 curMove = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
 
                 if (curMove == null)
