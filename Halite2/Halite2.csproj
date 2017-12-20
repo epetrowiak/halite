@@ -42,6 +42,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AbstractShip.cs" />
+    <Compile Include="BattleShip.cs" />
     <Compile Include="DarwinShip.cs" />
     <Compile Include="GameMaster.cs" />
     <Compile Include="hlt\Collision.cs" />
@@ -62,6 +64,7 @@
     <Compile Include="hlt\ThrustMove.cs" />
     <Compile Include="hlt\UndockMove.cs" />
     <Compile Include="hlt\Util.cs" />
+    <Compile Include="ISmartShip.cs" />
     <Compile Include="MyBot.cs" />
     <Compile Include="MyPlanet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

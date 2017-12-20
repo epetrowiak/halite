@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Halite2.hlt;
 
 namespace Halite2
@@ -13,52 +15,34 @@ namespace Halite2
             Networking networking = new Networking();
             var gameMaster = GameMaster.Initialize(networking.Initialize("Meucci"));
 
-            List<Move> moveList = new List<Move>();
+            var moveStack = new ConcurrentStack<Move>();
             while(true)
             {
-                moveList.Clear();
+                moveStack.Clear();
                 var readLineIntoMetadata = Networking.ReadLineIntoMetadata();
                 gameMaster.UpdateGame(readLineIntoMetadata);
                 var gameMap = gameMaster.GameMap;
-                
-                foreach (var ship in gameMap.GetMyPlayer().GetShips().Values)
+
+                Parallel.ForEach(gameMap.GetMyPlayer().GetShips(), kvp =>
                 {
+                    var ship = kvp.Value;
                     if (ship.GetHealth() <= 0) //Dunno if these are tracked
                     {
-                        continue;
+                        return;
                     }
 
-                    var myShip = new DarwinShip(ship);
-                    //Ship 2 will immediately attack
-                    if (ship.GetId() == 2)
-                    {
-                        DoBattle(myShip, moveList);
-                        continue;
-                    }
-
+                    var myShip = gameMaster.Activate(ship);
 
                     var bestMove = myShip.DoWork();
-
                     if (bestMove != null)
                     {
-                        moveList.Add(bestMove);
+                        moveStack.Push(bestMove);
                     }
-                    gameMaster.PreviousShips.Add(myShip);
-                }
+                });
 
-                Networking.SendMoves(moveList);
+                Networking.SendMoves(moveStack);
             }
         }
-
-        private static void DoBattle(DarwinShip myShip, List<Move> moveList)
-        {
-            var doBattleWithNearestEnemy = myShip.DoBattleWithNearestEnemy();
-            if (doBattleWithNearestEnemy != null)
-            {
-                moveList.Add(doBattleWithNearestEnemy);
-            }
-        }
-
 
         private static void SetupGame(string[] args)
         {
