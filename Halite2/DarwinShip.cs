@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Halite2.hlt;
 
 namespace Halite2
@@ -20,20 +22,57 @@ namespace Halite2
                 return null;
             }
 
+            var tasks = new Task[2];
+
             //Check Unclaimed Planet move
-            BestMoveToUnclaimedPlanet(gm);
+            var unClaimedPlanetMove = Task.Run(() => BestMoveToUnclaimedPlanet(gm));
+            tasks[0] = unClaimedPlanetMove;
 
             //Check Claimed Planet move
-            BestMoveToClaimedPlanet(gm);
+            var claimedPlanetMove = Task.Run(() => BestMoveToClaimedPlanet(gm));
+            tasks[1] = claimedPlanetMove;
+            Task.WaitAll(tasks);
+
+            SmartMove myMove = EvaluateBestMethod(claimedPlanetMove.Result, unClaimedPlanetMove.Result);
+
+            //Defend My Planets
+//            BestMoveToDefendMyPlanet(gm);
 
             //Check Move based on game state
             //            nextMove = BestGameMove(gm);
 //            EvaluateBestMethod(nextMove);
 
 
-            return BestMove?.Move;
+            return myMove?.Move;
         }
-        
+
+        private SmartMove BestMoveToDefendMyPlanet(GameMaster gm)
+        {
+            SmartMove bestMove = null;
+            var prevDist = double.MaxValue;
+            var bufferDistance = 1;
+            foreach (var enemyShip in gm.EnemyShipsNearMyPlanets)
+            {
+                var distToTarget = Me.GetDistanceTo(enemyShip);
+                if (distToTarget > prevDist + bufferDistance)
+                {
+                    continue;
+                }
+
+                prevDist = distToTarget;
+                var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
+                if (move == null)
+                {
+                    continue;
+                }
+
+                move.Value = DefendPlanetValue(move.Value);
+                bestMove = EvaluateBestMethod(move, bestMove);
+            }
+
+            return bestMove;
+        }
+
         private SmartMove BestGameMove(GameMaster gm)
         {
             //TODO: GameStates aren't set, and unsure of how to combine this with other 2 moves
@@ -50,56 +89,80 @@ namespace Halite2
             return move;
         }
 
-        private void BestMoveToClaimedPlanet(GameMaster gm)
+        private SmartMove BestMoveToClaimedPlanet(GameMaster gm)
         {
+            SmartMove bestMove = null;
             foreach (var claimedPlanet in gm.ClaimedPlanets)
             {
+                SmartMove move;
                 //Do nothing to my planet
                 if (claimedPlanet.GetOwner() == gm.MyPlayerId)
                 {
-                    DockToMyPlanetMove(gm, claimedPlanet);
+                    move = DockToMyPlanetMove(gm, claimedPlanet);
                 }
                 else
                 {
-                    ClaimEnemyPlanetMove(gm, claimedPlanet);
+                    move = ClaimEnemyPlanetMove(gm, claimedPlanet);
                 }
+                
+                bestMove = EvaluateBestMethod(move, bestMove);
             }
+
+            return bestMove;
         }
 
-        private void DockToMyPlanetMove(GameMaster gm, Planet claimedPlanet)
+        private SmartMove DockToMyPlanetMove(GameMaster gm, Planet claimedPlanet)
         {
             if (claimedPlanet.IsFull())
             {
-                return;
+                return null;
             }
 
-            TryDockToPlanet(claimedPlanet);
+            return TryDockToPlanet(claimedPlanet);
         }
 
 
-        private void ClaimEnemyPlanetMove(GameMaster gm, Planet enemyPlanet)
+        private SmartMove ClaimEnemyPlanetMove(GameMaster gm, Planet enemyPlanet)
         {
-            SmartMove curMove;
+            List<Task> tasks = new List<Task>();
+            var moveList = new ConcurrentStack<SmartMove>();
             foreach (var shipId in enemyPlanet.GetDockedShips())
             {
-                var enemyShip = gm.GameMap.GetShip(enemyPlanet.GetOwner(), shipId);
-                curMove = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
+                var task = Task.Run(() =>
+                {
+                    var enemyShip = gm.GameMap.GetShip(enemyPlanet.GetOwner(), shipId);
+                    moveList.Push(NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip)));
+                });
+                tasks.Add(task);
+            }
+            Task.WaitAll(tasks.ToArray());
 
-                if (curMove == null)
+            SmartMove bestMove = null;
+            foreach (var move in moveList)
+            {
+                if (move == null)
                 {
                     continue;
                 }
 
-                curMove.Value = ClaimedPlanetMultiplier(curMove.Value);
-                EvaluateBestMethod(curMove);
+                move.Value = ClaimedPlanetMultiplier(gm, move.Value);
+                bestMove = EvaluateBestMethod(move, bestMove);
             }
+
+            return bestMove;
         }
 
-        private void BestMoveToUnclaimedPlanet(GameMaster gm)
+        private SmartMove BestMoveToUnclaimedPlanet(GameMaster gm)
         {
+            SmartMove bestMove = null;
             foreach (var unClaimedPlanet in gm.UnClaimedPlanets)
             {
-                if (TryDockToPlanet(unClaimedPlanet)) break;
+                var dockPlanetMove = TryDockToPlanet(unClaimedPlanet);
+                if (dockPlanetMove != null)
+                {
+                    bestMove = EvaluateBestMethod(dockPlanetMove, bestMove);
+                    break;
+                }
 
                 var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(unClaimedPlanet));
 
@@ -109,37 +172,21 @@ namespace Halite2
                 }
 
                 move.Value = UnclaimedPlanetMultiplier(move.Value);
-                EvaluateBestMethod(move);
+                bestMove = EvaluateBestMethod(move, bestMove);
             }
+
+            return bestMove;
         }
 
-        private bool TryDockToPlanet(Planet planet)
+        private SmartMove TryDockToPlanet(Planet planet)
         {
             if (!Me.CanDock(planet))
             {
-                return false;
+                return null;
             }
-
-            var gm = GameMaster.Instance;
-            foreach (var enemyShip in gm.EnemyShips)
-            {
-                if (enemyShip.GetDistanceTo(planet) > 5) //Too far away, dont care
-                {
-                    continue;
-                }
-
-                var move = NavigateToTarget(gm.GameMap, Me.GetClosestPoint(enemyShip));
-                if (move == null)
-                {
-                    continue;
-                }
-
-                move.Value = DefendPlanetValue(move.Value);
-                EvaluateBestMethod(move);
-            }
-
+            
             var curMove = new SmartMove(GetDockValue(Me, planet), new DockMove(Me, planet));
-            return EvaluateBestMethod(curMove);
+            return curMove;
         }
 
     }

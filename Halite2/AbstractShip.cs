@@ -13,14 +13,14 @@ namespace Halite2
         protected static readonly int _thrust = Constants.MAX_SPEED;
         protected static readonly int _maxCorrections = 10;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
-//        protected static readonly double _shipAttackBonus = 12.0;
+        protected static readonly double _shipAttackBonus = 2.0;
 //        protected static readonly int _shipCountToAttackBonus = 3;
 //        protected static readonly double _kamikazeMinPercentage = 0.3;
 
         protected static readonly double _distanceNumerator = 20.0;
-        protected static readonly double _unclaimedPlanetBonus = 4.0;
+        protected static readonly double _unclaimedPlanetBonus = 2.0;
         protected static readonly double _myPlanetBonus = 0.2;
-        protected static readonly double _enemyPlanetBonus = 4.0;
+        protected static readonly double _enemyPlanetBonus = 2.0;
         protected static readonly double _defendPlanetBonus = 1.5;
 
 
@@ -86,6 +86,15 @@ namespace Halite2
         }
 
         #region Helpers
+        protected SmartMove EvaluateBestMethod(SmartMove nextMove, SmartMove bestMove)
+        {
+            if (nextMove != null && nextMove.CompareTo(bestMove) > 0)
+            {
+                return nextMove;
+            }
+            return bestMove;
+        }
+
         protected bool EvaluateBestMethod(SmartMove nextMove)
         {
             if (nextMove != null && nextMove.CompareTo(BestMove) > 0)
@@ -96,7 +105,7 @@ namespace Halite2
             return false;
         }
 
-        protected static double GetDockValue(Ship ship, Planet planet)
+        protected double GetDockValue(Ship ship, Planet planet)
         {
             //If I own the planet already
             var dist = ship.GetDistanceTo(ship.GetClosestPoint(planet));
@@ -109,27 +118,27 @@ namespace Halite2
             return distVal * 2;
         }
 
-        protected static double DefendPlanetValue(double distVal)
+        protected double DefendPlanetValue(double distVal)
         {
             return _defendPlanetBonus * distVal;
         }
 
 
-        protected static double UnclaimedPlanetMultiplier(double distVal)
+        protected double UnclaimedPlanetMultiplier(double distVal)
         {
             return _unclaimedPlanetBonus * distVal;
         }
 
-        protected static double MyPlanetMultiplier(double curValue)
+        protected double MyPlanetMultiplier(double curValue)
         {
             return _myPlanetBonus * curValue;
         }
 
-        protected static double ClaimedPlanetMultiplier(double distVal)
+        protected double ClaimedPlanetMultiplier(GameMaster gm, double distVal)
         {
             //Every nth ship, a bonus will be given to attack
-            //            var atkBonus = curCount % _shipCountToAttackBonus == 0 ? _shipAttackBonus : 1;
-            var atkBonus = 1;
+            var atkBonus = gm.HasSatisfactoryProduction && Me.GetId() % 2 == 1 ? _shipAttackBonus : 1;
+//            var atkBonus = 1;
 
             return _enemyPlanetBonus * distVal * atkBonus;
         }

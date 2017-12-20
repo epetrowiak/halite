@@ -16,19 +16,26 @@ namespace Halite2
             {
                 return null;
             }
-
-            DoBattleWithNearestEnemy(gm);
-
-            return BestMove?.Move;
+            
+            return DoBattleWithNearestEnemy(gm)?.Move;
         }
 
-        private void DoBattleWithNearestEnemy(GameMaster gameMaster)
+        private SmartMove DoBattleWithNearestEnemy(GameMaster gameMaster)
         {
+            SmartMove bestMove = null;
             foreach (var enemyShip in gameMaster.EnemyShips)
             {
-                var smartMove = NavigateToTarget(gameMaster.GameMap, Me.GetClosestPoint(enemyShip), _thrust, _maxCorrections);
-                EvaluateBestMethod(smartMove);
+                var smartMove = NavigateToTarget(gameMaster.GameMap, Me.GetClosestPoint(enemyShip), _thrust, _maxCorrections * 2);
+
+                if (smartMove == null)
+                {
+                    continue;
+                }
+
+                bestMove = EvaluateBestMethod(smartMove, bestMove);
             }
+
+            return bestMove;
         }
     }
 }
