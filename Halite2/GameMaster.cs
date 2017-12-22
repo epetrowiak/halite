@@ -83,7 +83,7 @@ namespace Halite2
             if (IsBattleShip(ship))
             {
                 return new BattleShip(ship);
-            }
+            } 
 
             return new DarwinShip(ship);
         }
