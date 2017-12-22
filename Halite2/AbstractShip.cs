@@ -11,7 +11,7 @@ namespace Halite2
 
         protected static readonly double _angularStepRad = Math.PI / 180.0;
         protected static readonly int _thrust = Constants.MAX_SPEED;
-        protected static readonly int _maxCorrections = 10;//Constants.MAX_NAVIGATION_CORRECTIONS;
+        protected static readonly int _maxCorrections = 8;//Constants.MAX_NAVIGATION_CORRECTIONS;
 
         protected static readonly double _shipAttackBonus = 2.0;
 //        protected static readonly int _shipCountToAttackBonus = 3;
@@ -20,7 +20,7 @@ namespace Halite2
         protected static readonly double _distanceNumerator = 20.0;
         protected static readonly double _unclaimedPlanetBonus = 2.0;
         protected static readonly double _myPlanetBonus = 0.2;
-        protected static readonly double _enemyPlanetBonus = 2.0;
+        protected static readonly double _enemyPlanetBonus = 2.2;
         protected static readonly double _defendPlanetBonus = 1.5;
 
 
@@ -51,7 +51,7 @@ namespace Halite2
             double distance = Me.GetDistanceTo(targetPos);
             double angleRad = Me.OrientTowardsInRad(targetPos);
 
-            var obstruction = gameMap.ObjectsBetween(Me, targetPos).FirstOrDefault();
+            var obstruction = ClosestObstruction(gameMap, targetPos);
             if (obstruction != null)
             {
                 var bestTarget = AvoidObstruction(targetPos, obstruction, angleRad, distance);
@@ -65,6 +65,21 @@ namespace Halite2
             double ptVal = distance > 0 ? _distanceNumerator / distance : _distanceNumerator * 100;
 
             return new SmartMove(ptVal, new ThrustMove(Me, angleDeg, thrust));
+        }
+
+        private Entity ClosestObstruction(GameMap gameMap, Position targetPos)
+        {
+            var dist = double.MaxValue;
+            Entity closest = null;
+            foreach (var obstruction in gameMap.ObjectsBetween(Me, targetPos))
+            {
+                var curDist = Me.GetDistanceTo(obstruction);
+                if (curDist < dist)
+                {
+                    closest = obstruction;
+                }
+            }
+            return closest;
         }
 
         protected Position AvoidObstruction(Position targetPos, Entity obstruction, double angleRad, double distance)
@@ -84,6 +99,7 @@ namespace Halite2
                 : otherTarget;
             return bestTarget;
         }
+
 
         #region Helpers
         protected SmartMove EvaluateBestMethod(SmartMove nextMove, SmartMove bestMove)
