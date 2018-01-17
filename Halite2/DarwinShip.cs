@@ -33,7 +33,8 @@ namespace Halite2
             tasks[1] = claimedPlanetMove;
             Task.WaitAll(tasks);
 
-            SmartMove myMove = EvaluateBestMethod(claimedPlanetMove.Result, unClaimedPlanetMove.Result);
+            SmartMove myMove = EvaluateBestMethod(claimedPlanetMove.Result, unClaimedPlanetMove.Result) ??
+                               MoveToNearestAlly(gm); //Find a friend and follow that guy :)
 
             //Defend My Planets
 
@@ -41,10 +42,68 @@ namespace Halite2
             //            nextMove = BestGameMove(gm);
 //            EvaluateBestMethod(nextMove);
 
+            if (myMove != null)
+            {
+                Target = myMove.Target;
+            }
 
             return myMove?.Move;
         }
-        
+
+        public override Move ReactToMyShip(ISmartShip otherShip)
+        {
+            var gm = GameMaster.Instance;
+            if (Me.GetDockingStatus() != Ship.DockingStatus.Undocked)
+            {
+                return null;
+            }
+
+            SmartMove bestMove = null;
+            foreach (var planet in gm.UnClaimedPlanets)
+            {
+                var dockPlanetMove = TryDockToPlanet(planet);
+                if (dockPlanetMove != null)
+                {
+                    bestMove = dockPlanetMove;
+                    break;
+                }
+            }
+
+            if (bestMove == null)
+            {
+                var dx = Me.GetXPos() - otherShip.Me.GetXPos();
+                var dy = Me.GetYPos() - otherShip.Me.GetYPos();
+                var position = new Position(Me.GetXPos() + dx * 2, Me.GetYPos() + dy * 2);
+                bestMove = NavigateToTarget(gm.GameMap, position);
+            }
+
+            return bestMove?.Move;
+        }
+
+        private SmartMove MoveToNearestAlly(GameMaster gm)
+        {
+            var dist = double.MaxValue;
+            SmartMove curMove = null;
+            foreach (var myShip in gm.GameMap.GetMyPlayer().GetShips().Values)
+            {
+                //Only team up with undocked ships
+                if (myShip.GetDockingStatus() != Ship.DockingStatus.Undocked)
+                {
+                    continue;
+                }
+
+                var distanceTo = Me.GetDistanceTo(myShip);
+                if (distanceTo < dist)
+                {
+                    dist = distanceTo;
+                    SmartMove myMove = NavigateToTarget(gm.GameMap, myShip);
+                    curMove = EvaluateBestMethod(myMove, curMove);
+                }
+            }
+
+            return curMove;
+        }
+
         private SmartMove BestGameMove(GameMaster gm)
         {
             //TODO: GameStates aren't set, and unsure of how to combine this with other 2 moves
@@ -130,7 +189,8 @@ namespace Halite2
                     continue;
                 }
 
-                move.Value = UnclaimedPlanetMultiplier(move.Value);
+                move.Value = UnclaimedPlanetMultiplier(move.Value) 
+                    * (1 + unClaimedPlanet.GetDockingSpots() * _unclaimedPlanetSizeBonus); //Should give a bump to larger planets
                 bestMove = EvaluateBestMethod(move, bestMove);
             }
 

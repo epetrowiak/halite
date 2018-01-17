@@ -50,7 +50,7 @@ namespace Halite2.hlt {
 
             return new Position(x, y);
         }
-
+        
         public override bool Equals(Object o) {
             if (this == o) 
                 return true;            

@@ -16,8 +16,20 @@ namespace Halite2
             {
                 return null;
             }
-            
-            return DoBattleWithNearestEnemy(gm)?.Move;
+
+            var myMove = DoBattleWithNearestEnemy(gm);
+
+            if (myMove != null)
+            {
+                Target = myMove.Target;
+            }
+
+            return myMove?.Move;
+        }
+
+        public override Move ReactToMyShip(ISmartShip otherShip)
+        {
+            return DoWork();
         }
 
         private SmartMove DoBattleWithNearestEnemy(GameMaster gameMaster)

@@ -7,7 +7,7 @@ namespace Halite2
     public abstract class AbstractShip : ISmartShip
     {
         public Ship Me { get; }
-        public SmartMove BestMove { get; set; }
+        public Position Target { get; set; }
 
         protected static readonly double _angularStepRad = Math.PI / 180.0;
         protected static readonly int _thrust = Constants.MAX_SPEED;
@@ -19,6 +19,7 @@ namespace Halite2
 
         protected static readonly double _distanceNumerator = 20.0;
         protected static readonly double _unclaimedPlanetBonus = 2.0;
+        protected static readonly double _unclaimedPlanetSizeBonus = 0.3;
         protected static readonly double _myPlanetBonus = 0.2;
         protected static readonly double _enemyPlanetBonus = 2.2;
         protected static readonly double _defendPlanetBonus = 1.5;
@@ -30,6 +31,7 @@ namespace Halite2
         }
 
         public abstract Move DoWork();
+        public abstract Move ReactToMyShip(ISmartShip otherShip);
 
 
         protected SmartMove NavigateToTarget(GameMap gameMap, Position targetPos)
@@ -64,7 +66,7 @@ namespace Halite2
             //Increase pt value as you get closer to target
             double ptVal = distance > 0 ? _distanceNumerator / distance : _distanceNumerator * 100;
 
-            return new SmartMove(ptVal, new ThrustMove(Me, angleDeg, thrust));
+            return new SmartMove(ptVal, new ThrustMove(Me, angleDeg, thrust), targetPos);
         }
 
         private Entity ClosestObstruction(GameMap gameMap, Position targetPos)
@@ -73,6 +75,15 @@ namespace Halite2
             Entity closest = null;
             foreach (var obstruction in gameMap.ObjectsBetween(Me, targetPos))
             {
+//                if (obstruction.GetOwner() == Me.GetOwner() && obstruction.GetType() == typeof(Ship))
+//                {
+//                    Ship ship = (Ship) obstruction;
+//                    if (ship.GetDockingStatus() == Ship.DockingStatus.Undocked)
+//                    {
+//                        continue; //My ship that is undocked is not an obstruction
+//                    }
+//                }
+
                 var curDist = Me.GetDistanceTo(obstruction);
                 if (curDist < dist)
                 {
@@ -91,13 +102,13 @@ namespace Halite2
             double newTargetDx = Math.Cos(angleRad + angularStepRad2) * distance;
             double newTargetDy = Math.Sin(angleRad + angularStepRad2) * distance;
             Position newTarget = new Position(Me.GetXPos() + newTargetDx, Me.GetYPos() + newTargetDy);
-            double otherTargetDx = Math.Cos(angleRad - angularStepRad2) * distance;
-            double otherTargetDy = Math.Sin(angleRad - angularStepRad2) * distance;
-            Position otherTarget = new Position(Me.GetXPos() + otherTargetDx, Me.GetYPos() + otherTargetDy);
-            var bestTarget = newTarget.GetDistanceTo(targetPos) <= otherTarget.GetDistanceTo(targetPos)
-                ? newTarget
-                : otherTarget;
-            return bestTarget;
+//            double otherTargetDx = Math.Cos(angleRad - angularStepRad2) * distance;
+//            double otherTargetDy = Math.Sin(angleRad - angularStepRad2) * distance;
+//            Position otherTarget = new Position(Me.GetXPos() + otherTargetDx, Me.GetYPos() + otherTargetDy);
+//            var bestTarget = newTarget.GetDistanceTo(targetPos) <= otherTarget.GetDistanceTo(targetPos)
+//                ? newTarget
+//                : otherTarget;
+            return newTarget;
         }
 
 
@@ -109,16 +120,6 @@ namespace Halite2
                 return nextMove;
             }
             return bestMove;
-        }
-
-        protected bool EvaluateBestMethod(SmartMove nextMove)
-        {
-            if (nextMove != null && nextMove.CompareTo(BestMove) > 0)
-            {
-                BestMove = nextMove;
-                return true;
-            }
-            return false;
         }
 
         protected double GetDockValue(Ship ship, Planet planet)
@@ -173,11 +174,19 @@ namespace Halite2
     {
         public double Value { get; set; }
         public Move Move { get; set; }
+        public Position Target { get; set; }
 
         public SmartMove(double value, Move move)
         {
             Value = value;
             Move = move;
+        }
+
+        public SmartMove(double value, Move move, Position target)
+        {
+            Value = value;
+            Move = move;
+            Target = target;
         }
 
         public int CompareTo(SmartMove other)

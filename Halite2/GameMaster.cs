@@ -29,7 +29,9 @@ namespace Halite2
             GameMap = map;
             GameState = GameState.Expand;
             MyPlayerId = GameMap.GetMyPlayerId();
+
             CurrentBattleShipId = 2;
+            OtherBattleShips = new List<int>();
 
             ClaimedPlanets = new List<Planet>();
             UnClaimedPlanets = new List<Planet>();
@@ -52,7 +54,7 @@ namespace Halite2
         #endregion
 
 
-        protected static readonly double _planetDefDist = 6;
+        protected static readonly double _planetDefDist = 10;
 
         public int MyPlayerId { get; set; }
 
@@ -99,6 +101,7 @@ namespace Halite2
 
         private void UpdateShips()
         {
+            OtherBattleShips.Clear();
             EnemyShips.Clear();
             EnemyShips.AddRange(GameMap.GetAllShips().AsParallel().Where(ship => ship.GetOwner() != MyPlayerId));
 
@@ -108,14 +111,60 @@ namespace Halite2
                 EnemyShipsNearMyPlanets.AddRange(closeShips);
             }
 
+            var myShips = GameMap.GetMyPlayer().GetShips();
+
             //Always keep 1 battle ship
-            Ship myship;
-            var shipExists = GameMap.GetMyPlayer().GetShips().TryGetValue(CurrentBattleShipId, out myship);
-            if(!shipExists || (myship != null && myship.GetHealth() <= 0) || (myship != null && myship.GetDockingStatus() != Ship.DockingStatus.Undocked))
+            SetBattleShip(myShips);
+            SetOtherBattleShips(myShips);
+        }
+
+        private void SetOtherBattleShips(IDictionary<int, Ship> myShips)
+        {
+            int maxDefenders = 6;
+            foreach (var myShip in myShips)
             {
-                KeyValuePair<int, Ship> lastUndockedShip = GameMap.GetMyPlayer().GetShips()
+                var isClose = EnemyShipsNearMyPlanets.AsParallel().Any(s => s.GetDistanceTo(myShip.Value) <= _planetDefDist);
+                if (!isClose)
+                {
+                    continue;
+                }
+
+                OtherBattleShips.Add(myShip.Key);
+                if (OtherBattleShips.Count >= maxDefenders)
+                {
+                    return;
+                }
+            }
+        }
+
+        private void SetBattleShip(IDictionary<int, Ship> myShips)
+        {
+            Ship myship;
+            var shipExists = myShips.TryGetValue(CurrentBattleShipId, out myship);
+            if (!shipExists || (myship != null && myship.GetHealth() <= 0) ||
+                (myship != null && myship.GetDockingStatus() != Ship.DockingStatus.Undocked))
+            {
+                KeyValuePair<int, Ship> lastUndockedShip = myShips
                     .LastOrDefault(x => x.Value.GetDockingStatus() == Ship.DockingStatus.Undocked);
                 CurrentBattleShipId = lastUndockedShip.Key;
+                myShips.TryGetValue(CurrentBattleShipId, out myship);
+            }
+            if (CurrentBattleShipId < 4)
+            {
+                if (myship == null) return;
+                bool hasNearbyEnemy = false;
+                foreach (var enemyShip in EnemyShips)
+                {
+                    if (myship.GetDistanceTo(enemyShip) < 90)
+                    {
+                        hasNearbyEnemy = true;
+                        break;
+                    }
+                }
+                if (!hasNearbyEnemy)
+                {
+                    CurrentBattleShipId = -1;
+                }
             }
         }
 
@@ -157,10 +206,12 @@ namespace Halite2
 
         #endregion
 
+        public List<int> OtherBattleShips { get; set; }
         public int CurrentBattleShipId { get; set; }
         private bool IsBattleShip(Ship ship)
         {
-            return ship.GetId() == CurrentBattleShipId;
+            return ship.GetId() == CurrentBattleShipId ||
+                OtherBattleShips.Contains(ship.GetId());
         }
     }
 
